@@ -1,8 +1,10 @@
 ﻿namespace PackDeps;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Cocona;
 using PackDeps.Deps;
@@ -17,11 +19,18 @@ public class Program
         Document depsDoc;
         using (FileStream file = File.OpenRead(depsJson))
         {
-            depsDoc = await JsonSerializer.DeserializeAsync<Document>(file) ??
-                throw new CommandExitedException(
+            var options = new JsonSerializerOptions
+            {
+                Converters =
+                {
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, false),
+                }
+            };
+            depsDoc =
+                await JsonSerializer.DeserializeAsync<Document>(file, options)
+                ?? throw new CommandExitedException(
                     $"Failed to parse {depsJson} file.",
-                    1
-                );
+                    1);
         }
 
         var references = depsDoc.Targets[depsDoc.RuntimeTarget.Name];
@@ -33,6 +42,14 @@ public class Program
                 foreach (string asm in reference.Runtime.Keys)
                 {
                     Console.WriteLine("- {0}", asm);
+                }
+            }
+
+            if (depsDoc.Libraries is { } libs)
+            {
+                if (libs.GetValueOrDefault(pkg, null) is {} lib)
+                {
+                    Console.WriteLine("{0}", lib.Path);
                 }
             }
             Console.WriteLine("");

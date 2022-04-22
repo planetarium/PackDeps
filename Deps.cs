@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Security.Cryptography;
+
 namespace PackDeps.Deps;
 
 using System.Collections.Generic;
@@ -14,6 +18,13 @@ public class Document
         get;
         set;
     } = new Dictionary<string, Dictionary<string, Reference>>();
+
+    [JsonPropertyName("libraries")]
+    public Dictionary<string, Library> Libraries
+    {
+        get;
+        set;
+    } = new Dictionary<string, Library>();
 }
 
 public class RuntimeTarget
@@ -38,4 +49,43 @@ public class LinkedAssembly
 
     [JsonPropertyName("fileVersion")]
     public string FileVersion { get; set; } = "";
+}
+
+public class Library
+{
+    [JsonPropertyName("type")]
+    public LibraryType Type { get; set; }
+
+    [JsonPropertyName("serviceable")]
+    public bool Serviceable { get; set; }
+
+    [JsonPropertyName("sha512")] public string Sha512String { get; set; } = "";
+
+    [JsonIgnore]
+    public byte[] Sha512
+    {
+        get
+        {
+            if (Sha512String is null || !Sha512String.Any())
+            {
+                return Array.Empty<byte>();
+            }
+            else if (!Sha512String.StartsWith("sha512-"))
+            {
+                throw new InvalidOperationException(
+                    $"Invalid SHA512 string: {Sha512String}");
+            }
+
+            return Convert.FromBase64String(Sha512String.Substring(7));
+        }
+    }
+
+    [JsonPropertyName("path")]
+    public string Path { get; set; } = "";
+}
+
+public enum LibraryType
+{
+    Package,
+    Project,
 }
