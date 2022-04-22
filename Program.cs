@@ -1,7 +1,6 @@
 ﻿namespace PackDeps;
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -14,8 +13,15 @@ public class Program
     public static Task Main(string[] args) =>
         CoconaApp.RunAsync<Program>(args);
 
-    public async Task RunAsync([Argument, FileExists]string depsJson)
+    public async Task RunAsync(
+        [Argument(Description = "The path to the deps.json file.")]
+        [FileExists]
+        string depsJson,
+        [Option(Description = "The path to NuGet global packages directory.")]
+        string? globalPackages = null
+    )
     {
+        globalPackages ??= GetDefaultGlobalPackages();
         Document depsDoc;
         using (FileStream file = File.OpenRead(depsJson))
         {
@@ -33,26 +39,21 @@ public class Program
                     1);
         }
 
-        var references = depsDoc.Targets[depsDoc.RuntimeTarget.Name];
-        foreach ((string pkg, Reference reference) in references)
+        foreach (string asm in depsDoc.CollectFiles(globalPackages))
         {
-            Console.WriteLine("{0}", pkg);
-            if (reference.Runtime is {} runtime)
-            {
-                foreach (string asm in reference.Runtime.Keys)
-                {
-                    Console.WriteLine("- {0}", asm);
-                }
-            }
-
-            if (depsDoc.Libraries is { } libs)
-            {
-                if (libs.GetValueOrDefault(pkg, null) is {} lib)
-                {
-                    Console.WriteLine("{0}", lib.Path);
-                }
-            }
-            Console.WriteLine("");
+            Console.WriteLine("{0}", asm);
         }
+    }
+
+    private static string GetDefaultGlobalPackages()
+    {
+        if (Environment.GetEnvironmentVariable("NUGET_PACKAGES") is { } path)
+        {
+            return path;
+        }
+
+        string home =
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, ".nuget", "packages");
     }
 }
