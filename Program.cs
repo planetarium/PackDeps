@@ -17,10 +17,17 @@ public class Program
         [Argument(Description = "The path to the deps.json file.")]
         [FileExists]
         string depsJson,
+        [Argument(Description = "The directory to place the assemblies.")]
+        string outDir,
         [Option(Description = "The path to NuGet global packages directory.")]
         string? globalPackages = null
     )
     {
+        if (!Directory.Exists(outDir))
+        {
+            Directory.CreateDirectory(outDir);
+        }
+
         globalPackages ??= GetDefaultGlobalPackages();
         Document depsDoc;
         using (FileStream file = File.OpenRead(depsJson))
@@ -39,9 +46,12 @@ public class Program
                     1);
         }
 
-        foreach (string asm in depsDoc.CollectFiles(globalPackages))
+        foreach (string asm in depsDoc.CollectFilePaths(globalPackages))
         {
-            Console.WriteLine("{0}", asm);
+            string basename = Path.GetFileName(asm);
+            string targetPath = Path.Combine(outDir, basename);
+            Console.Error.WriteLine("{0} -> {1}", asm, targetPath);
+            File.Copy(asm, targetPath, overwrite: true);
         }
     }
 

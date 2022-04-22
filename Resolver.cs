@@ -6,7 +6,7 @@ using PackDeps.Deps;
 
 public static class Resolver
 {
-    public static IEnumerable<string> CollectFiles(
+    public static IEnumerable<string> CollectFilePaths(
         this Document depsDoc,
         string globalPackagesDir
     )
