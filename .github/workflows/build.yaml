@@ -1,0 +1,17 @@
+name: build
+on: [push, pull_request]
+
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: '6.0.x'
+    - run: |
+        set -eou pipefail
+        dotnet build
+        mkdir -p "$RUNNER_TEMP/deps/"
+        dotnet run -- bin/Debug/net6.0/PackDeps.deps.json "$RUNNER_TEMP/deps/"
