@@ -12,10 +12,12 @@ public class FileExistsAttribute : ValidationAttribute
     {
         if (value is string path)
         {
-            if (File.Exists(path)) {
+            if (File.Exists(path))
+            {
                 return ValidationResult.Success;
             }
-            else if (Directory.Exists(path)) {
+            else if (Directory.Exists(path))
+            {
                 return new ValidationResult($"{path} is not a regular file.");
             }
 

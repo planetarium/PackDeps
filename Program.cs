@@ -1,4 +1,4 @@
-﻿namespace PackDeps;
+namespace PackDeps;
 
 using System;
 using System.IO;

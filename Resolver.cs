@@ -15,7 +15,16 @@ public static class Resolver
         foreach ((string pkg, Reference reference) in references)
         {
             if (depsDoc.Libraries is not { } libs) continue;
-            if (libs.GetValueOrDefault(pkg, null) is not { } lib) continue;
+            Library lib;
+            try
+            {
+                lib = libs[pkg];
+            }
+            catch (KeyNotFoundException)
+            {
+                continue;
+            }
+
             if (reference.Runtime is not { } runtime) continue;
             string pkgDir = Path.Combine(globalPackagesDir, lib.Path);
             foreach (string asm in reference.Runtime.Keys)
