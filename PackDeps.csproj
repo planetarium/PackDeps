@@ -1,9 +1,37 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Description>Pack all dependencies that your project links to into a flat
+    list of assemblies</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Authors>Planetarium</Authors>
+    <Company>Planetarium</Company>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <RequireLicenseAcceptance>true</RequireLicenseAcceptance>
+    <RepositoryUrl>https://github.com/planetarium/PackDeps.git</RepositoryUrl>
+    <RootNamespace>PackDeps</RootNamespace>
+    <ToolCommandName>pack-deps</ToolCommandName>
+    <RepositoryType>git</RepositoryType>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(PublishSingleFile)' != 'true' ">
+    <PackAsTool>true</PackAsTool>
+    <AssemblyName>PackDeps</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(PublishSingleFile)' == 'true' ">
+    <AssemblyName>pack-deps</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup
+    Condition=" '$(PublishSingleFile)' == 'true' And
+                '$(RuntimeIdentifier.Substring(0, 6))' == 'linux-' ">
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Cocona" Version="2.0.3" />
   </ItemGroup>

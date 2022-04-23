@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: build
 on: [push, pull_request]
 
@@ -15,3 +16,82 @@ jobs:
         dotnet build
         mkdir -p "$RUNNER_TEMP/deps/"
         dotnet run -- bin/Debug/net6.0/PackDeps.deps.json "$RUNNER_TEMP/deps/"
+
+  single-executable:
+    strategy:
+      matrix:
+        include:
+        - rid: linux-x64
+          os: ubuntu-latest
+        - rid: osx-x64
+          os: macos-latest
+        - rid: win-x64
+          os: windows-latest
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: '6.0.x'
+    - if: github.event_name != 'push' || github.ref_type != 'tag'
+      id: latest-version
+      uses: WyriHaximus/github-action-get-previous-tag@v1
+      with:
+        fallback: 0.0.0
+    - if: github.event_name != 'push' || github.ref_type != 'tag'
+      id: next-version
+      shell: python
+      run: |
+        v = '${{ steps.latest-version.outputs.tag }}'
+        vt = list(map(int, v.split('.')))
+        vt[1] += 1
+        vt[2] = 0
+        print('::set-output name=v::{0}.{1}.{2}'.format(*vt))
+    - id: version
+      shell: bash
+      run: |
+        set -eou pipefail
+        if [[ "$GITHUB_EVENT_NAME" = push && "$GITHUB_REF_TYPE" = tag ]]; then
+          echo ::set-output "name=short::$GITHUB_REF_NAME"
+          echo ::set-output "name=long::$GITHUB_REF_NAME"
+        else
+          short="${{ steps.next-version.outputs.v }}-dev.$GITHUB_RUN_ID"
+          echo ::set-output "name=short::$short"
+          echo ::set-output "name=long::$short+${GITHUB_SHA:0:7}"
+        fi
+    - run: >-
+        dotnet publish
+        --self-contained
+        --runtime "${{ matrix.rid }}"
+        --configuration Release
+        /p:Version="${{ steps.version.outputs.long }}"
+        /p:PublishSingleFile=true
+    - run: cp LICENSE "bin/Release/net6.0/${{ matrix.rid }}/publish/"
+    - run: cp README.md "bin/Release/net6.0/${{ matrix.rid }}/publish/"
+    - if: runner.os != 'Windows'
+      shell: bash
+      working-directory: bin/Release/net6.0/${{ matrix.rid }}/publish
+      run: |
+        set -eou pipefail
+        ver="${{ steps.version.outputs.short }}"
+        rid="${{ matrix.rid }}"
+        mkdir "$RUNNER_TEMP/D"
+        tar cvfJ \
+          "$RUNNER_TEMP/D/pack-deps-$ver-$rid.tar.xz" \
+          *
+    - if: runner.os == 'Windows'
+      shell: pwsh
+      working-directory: bin\Release\net6.0\${{ matrix.rid }}\publish
+      run: |
+        $ver = "${{ steps.version.outputs.short }}"
+        $rid = "${{ matrix.rid }}"
+        $distDir = New-Item -Path $env:RUNNER_TEMP -Name D -ItemType directory
+        Compress-Archive `
+          -Path .\* `
+          -DestinationPath `
+            "$distDir\pack-deps-$ver-$rid.zip"
+    - uses: actions/upload-artifact@v3
+      with:
+        name: dist-${{ matrix.rid }}
+        path: ${{ runner.temp }}/D/pack-deps-*
