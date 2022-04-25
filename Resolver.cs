@@ -8,7 +8,8 @@ public static class Resolver
 {
     public static IEnumerable<string> CollectFilePaths(
         this Document depsDoc,
-        string globalPackagesDir
+        string globalPackagesDir,
+        bool includeXmlDocs = false
     )
     {
         var references = depsDoc.Targets[depsDoc.RuntimeTarget.Name];
@@ -33,6 +34,13 @@ public static class Resolver
                 if (File.Exists(asmPath))
                 {
                     yield return asmPath;
+                }
+
+                if (!includeXmlDocs) continue;
+                string xmlPath = Path.ChangeExtension(asmPath, ".xml");
+                if (File.Exists(xmlPath))
+                {
+                    yield return xmlPath;
                 }
             }
         }

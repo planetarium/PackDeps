@@ -20,7 +20,9 @@ public class Program
         [Argument(Description = "The directory to place the assemblies.")]
         string outDir,
         [Option(Description = "The path to NuGet global packages directory.")]
-        string? globalPackages = null
+        string? globalPackages = null,
+        [Option('x', Description = "Include XML docs.")]
+        bool includeXmlDocs = false
     )
     {
         if (!Directory.Exists(outDir))
@@ -46,12 +48,14 @@ public class Program
                     1);
         }
 
-        foreach (string asm in depsDoc.CollectFilePaths(globalPackages))
+        var collectedFilePaths =
+            depsDoc.CollectFilePaths(globalPackages, includeXmlDocs);
+        foreach (string f in collectedFilePaths)
         {
-            string basename = Path.GetFileName(asm);
+            string basename = Path.GetFileName(f);
             string targetPath = Path.Combine(outDir, basename);
-            Console.Error.WriteLine("{0} -> {1}", asm, targetPath);
-            File.Copy(asm, targetPath, overwrite: true);
+            Console.Error.WriteLine("{0} -> {1}", f, targetPath);
+            File.Copy(f, targetPath, overwrite: true);
         }
     }
 
