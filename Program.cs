@@ -1,7 +1,9 @@
 namespace PackDeps;
 
 using System;
+using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -21,8 +23,13 @@ public class Program
         string outDir,
         [Option(Description = "The path to NuGet global packages directory.")]
         string? globalPackages = null,
-        [Option('N', Description = "Exclude native libraries.")]
-        bool excludeNativeLibraries = false,
+        [Option(
+            "runtime",
+            new char[] { 'r' },
+            Description = "RIDs (Runtime Identifiers) of the native " +
+                "libraries to include.  Include everything by default."
+        )]
+        string[]? runtimes = null,
         [Option('X', Description = "Exclude XML docs.")]
         bool excludeXmlDocs = false
     )
@@ -52,7 +59,9 @@ public class Program
 
         var collectedFilePaths = depsDoc.CollectFilePaths(
             globalPackages,
-            excludeNativeLibraries,
+            runtimes
+                ?.Select(rid => rid.ToLowerInvariant())
+                ?.ToImmutableHashSet(),
             excludeXmlDocs
         );
         foreach ((string src, string dst) in collectedFilePaths)

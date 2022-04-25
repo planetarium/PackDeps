@@ -1,6 +1,7 @@
 namespace PackDeps;
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using PackDeps.Deps;
 
@@ -11,7 +12,7 @@ public static class Resolver
     public static IEnumerable<Resolution> CollectFilePaths(
         this Document depsDoc,
         string globalPackagesDir,
-        bool excludeNativeLibraries = false,
+        IImmutableSet<string>? runtimes = null,
         bool excludeXmlDocs = false
     )
     {
@@ -61,25 +62,31 @@ public static class Resolver
                 }
             }
 
-            if (excludeNativeLibraries) continue;
             string pkgDirBase = Path.GetFullPath(pkgDir);
             string runtimesDir = Path.Combine(pkgDir, "runtimes");
             if (!Directory.Exists(runtimesDir)) continue;
 
-            IEnumerable<string> runtimeLibs = Directory.EnumerateFiles(
-                runtimesDir,
-                "*",
-                SearchOption.AllDirectories
-            );
-            foreach (string runtimeLib in runtimeLibs)
+            foreach (string rDir in Directory.EnumerateDirectories(runtimesDir))
             {
-                if (!runtimeLib.StartsWith(runtimesDir)) continue;
-                yield return new Resolution
+                string rid = Path.GetFileName(rDir).ToLowerInvariant();
+                if (runtimes is { } rids && !rids.Contains(rid)) continue;
+                string nativeDir = Path.Combine(rDir, "native");
+                if (!Directory.Exists(nativeDir)) continue;
+                IEnumerable<string> runtimeLibs = Directory.EnumerateFiles(
+                    nativeDir,
+                    "*",
+                    SearchOption.AllDirectories
+                );
+                foreach (string runtimeLib in runtimeLibs)
                 {
-                    SourcePath = runtimeLib,
-                    DestinationPath =
-                        runtimeLib.Substring(pkgDirBase.Length + 1),
-                };
+                    if (!runtimeLib.StartsWith(runtimesDir)) continue;
+                    yield return new Resolution
+                    {
+                        SourcePath = runtimeLib,
+                        DestinationPath =
+                            runtimeLib.Substring(pkgDirBase.Length + 1),
+                    };
+                }
             }
         }
     }
