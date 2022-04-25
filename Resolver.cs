@@ -11,6 +11,7 @@ public static class Resolver
     public static IEnumerable<Resolution> CollectFilePaths(
         this Document depsDoc,
         string globalPackagesDir,
+        bool excludeNativeLibraries = false,
         bool excludeXmlDocs = false
     )
     {
@@ -58,6 +59,27 @@ public static class Resolver
                         DestinationPath = Path.GetFileName(xmlPath),
                     };
                 }
+            }
+
+            if (excludeNativeLibraries) continue;
+            string pkgDirBase = Path.GetFullPath(pkgDir);
+            string runtimesDir = Path.Combine(pkgDir, "runtimes");
+            if (!Directory.Exists(runtimesDir)) continue;
+
+            IEnumerable<string> runtimeLibs = Directory.EnumerateFiles(
+                runtimesDir,
+                "*",
+                SearchOption.AllDirectories
+            );
+            foreach (string runtimeLib in runtimeLibs)
+            {
+                if (!runtimeLib.StartsWith(runtimesDir)) continue;
+                yield return new Resolution
+                {
+                    SourcePath = runtimeLib,
+                    DestinationPath =
+                        runtimeLib.Substring(pkgDirBase.Length + 1),
+                };
             }
         }
     }

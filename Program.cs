@@ -21,6 +21,8 @@ public class Program
         string outDir,
         [Option(Description = "The path to NuGet global packages directory.")]
         string? globalPackages = null,
+        [Option('N', Description = "Exclude native libraries.")]
+        bool excludeNativeLibraries = false,
         [Option('X', Description = "Exclude XML docs.")]
         bool excludeXmlDocs = false
     )
@@ -48,8 +50,11 @@ public class Program
                     1);
         }
 
-        var collectedFilePaths =
-            depsDoc.CollectFilePaths(globalPackages, excludeXmlDocs);
+        var collectedFilePaths = depsDoc.CollectFilePaths(
+            globalPackages,
+            excludeNativeLibraries,
+            excludeXmlDocs
+        );
         foreach ((string src, string dst) in collectedFilePaths)
         {
             string targetPath = Path.Combine(outDir, dst);
