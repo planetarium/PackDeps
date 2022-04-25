@@ -21,8 +21,8 @@ public class Program
         string outDir,
         [Option(Description = "The path to NuGet global packages directory.")]
         string? globalPackages = null,
-        [Option('x', Description = "Include XML docs.")]
-        bool includeXmlDocs = false
+        [Option('X', Description = "Exclude XML docs.")]
+        bool excludeXmlDocs = false
     )
     {
         if (!Directory.Exists(outDir))
@@ -49,13 +49,18 @@ public class Program
         }
 
         var collectedFilePaths =
-            depsDoc.CollectFilePaths(globalPackages, includeXmlDocs);
-        foreach (string f in collectedFilePaths)
+            depsDoc.CollectFilePaths(globalPackages, excludeXmlDocs);
+        foreach ((string src, string dst) in collectedFilePaths)
         {
-            string basename = Path.GetFileName(f);
-            string targetPath = Path.Combine(outDir, basename);
-            Console.Error.WriteLine("{0} -> {1}", f, targetPath);
-            File.Copy(f, targetPath, overwrite: true);
+            string targetPath = Path.Combine(outDir, dst);
+            if (!(Path.GetDirectoryName(targetPath) is { } targetDir)) continue;
+            if (!Directory.Exists(targetDir))
+            {
+                Directory.CreateDirectory(targetDir);
+            }
+
+            Console.Error.WriteLine("{0} -> {1}", src, targetPath);
+            File.Copy(src, targetPath, overwrite: true);
         }
     }
 

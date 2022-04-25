@@ -6,10 +6,12 @@ using PackDeps.Deps;
 
 public static class Resolver
 {
-    public static IEnumerable<string> CollectFilePaths(
+    public record struct Resolution(string SourcePath, string DestinationPath);
+
+    public static IEnumerable<Resolution> CollectFilePaths(
         this Document depsDoc,
         string globalPackagesDir,
-        bool includeXmlDocs = false
+        bool excludeXmlDocs = false
     )
     {
         var references = depsDoc.Targets[depsDoc.RuntimeTarget.Name];
@@ -28,19 +30,33 @@ public static class Resolver
 
             if (reference.Runtime is not { } runtime) continue;
             string pkgDir = Path.Combine(globalPackagesDir, lib.Path);
-            foreach (string asm in reference.Runtime.Keys)
+            foreach (string file in reference.Runtime.Keys)
             {
-                string asmPath = Path.Combine(pkgDir, asm);
-                if (File.Exists(asmPath))
+                string filePath = Path.Combine(pkgDir, file);
+                if (File.Exists(filePath))
                 {
-                    yield return asmPath;
+                    yield return new Resolution
+                    {
+                        SourcePath = filePath,
+                        DestinationPath = Path.GetFileName(filePath),
+                    };
                 }
 
-                if (!includeXmlDocs) continue;
-                string xmlPath = Path.ChangeExtension(asmPath, ".xml");
+                bool isDll = Path.GetExtension(filePath).Equals(
+                    ".dll",
+                    System.StringComparison.InvariantCultureIgnoreCase
+                );
+                if (!isDll) continue;
+
+                if (excludeXmlDocs) continue;
+                string xmlPath = Path.ChangeExtension(filePath, ".xml");
                 if (File.Exists(xmlPath))
                 {
-                    yield return xmlPath;
+                    yield return new Resolution
+                    {
+                        SourcePath = xmlPath,
+                        DestinationPath = Path.GetFileName(xmlPath),
+                    };
                 }
             }
         }
