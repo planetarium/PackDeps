@@ -21,6 +21,12 @@ public class Program
         string depsJson,
         [Argument(Description = "The directory to place the assemblies.")]
         string outDir,
+        [Option(
+            "exclude-package",
+            new char[] { 'P' },
+            Description = "Package(s) to exclude."
+        )]
+        string[]? excludePackages = null,
         [Option(Description = "The path to NuGet global packages directory.")]
         string? globalPackages = null,
         [Option(
@@ -58,11 +64,13 @@ public class Program
         }
 
         var collectedFilePaths = depsDoc.CollectFilePaths(
-            globalPackages,
-            runtimes
+            globalPackagesDir: globalPackages,
+            excludePackages: excludePackages?.ToImmutableHashSet()
+                ?? ImmutableHashSet<string>.Empty,
+            runtimes: runtimes
                 ?.Select(rid => rid.ToLowerInvariant())
                 ?.ToImmutableHashSet(),
-            excludeXmlDocs
+            excludeXmlDocs: excludeXmlDocs
         );
         foreach ((string src, string dst) in collectedFilePaths)
         {

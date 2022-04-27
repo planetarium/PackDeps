@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace PackDeps;
 
 using System.Collections.Generic;
@@ -12,18 +14,26 @@ public static class Resolver
     public static IEnumerable<Resolution> CollectFilePaths(
         this Document depsDoc,
         string globalPackagesDir,
+        IImmutableSet<string> excludePackages,
         IImmutableSet<string>? runtimes = null,
         bool excludeXmlDocs = false
     )
     {
         var references = depsDoc.Targets[depsDoc.RuntimeTarget.Name];
-        foreach ((string pkg, Reference reference) in references)
+        excludePackages = excludePackages
+            .Select(p => p.ToLowerInvariant())
+            .ToImmutableHashSet();
+        foreach ((string pkgWithVer, Reference reference) in references)
         {
+            string pkgName = pkgWithVer.IndexOf('/') is { } idx && idx >= 0
+                ? pkgWithVer.Substring(0, idx)
+                : pkgWithVer;
+            if (excludePackages.Contains(pkgName.ToLowerInvariant())) continue;
             if (depsDoc.Libraries is not { } libs) continue;
             Library lib;
             try
             {
-                lib = libs[pkg];
+                lib = libs[pkgWithVer];
             }
             catch (KeyNotFoundException)
             {
